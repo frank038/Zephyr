@@ -17,3 +17,5 @@ Features:
 - different font size choise for the view and the printer;
 - etc.
 
+
+![My image](https://github.com/frank038/Zephyr/blob/main/screenshot.png)
