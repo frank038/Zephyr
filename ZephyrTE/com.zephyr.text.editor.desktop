@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.1
+Type=Application
+Name=Zephyr
+Comment=Text editor
+Icon=/FULL/PATH/ZephyrTE/icons/zephyr.svg
+Path=/FULL/PATH/ZephyrTE
+Exec=/FULL/PATH/ZephyrTE/ZephyrTE.sh
+MimeType=text/plain;
+Categories=Utility;
+Keywords=Editor;Text;
