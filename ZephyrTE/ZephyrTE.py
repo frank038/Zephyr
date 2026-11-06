@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.8.0 beta"
+VERSION = "0.8.1 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -1056,7 +1056,7 @@ class MyApp(Gtk.Application):
                         n_pages = active_window._notebook.get_n_pages()
                         for i in range(n_pages):
                             __sw = active_window._notebook.get_nth_page(i)
-                            if __sw._gfile.get_path() == _gf.get_path():
+                            if __sw._gfile and __sw._gfile.get_path() == _gf.get_path():
                                 file_found = 1
                                 break
                         #
@@ -1090,7 +1090,7 @@ class MyApp(Gtk.Application):
             args = command_line.get_arguments()
             COMMANDLINE_CWD = command_line.get_cwd()
             try:
-                subprocess.Popen([os.path.join(cwd,"ZephyrTE.sh"),args[1]])#, start_new_session=True)
+                subprocess.Popen([os.path.join(COMMANDLINE_CWD,"ZephyrTE.sh"),args[1]])#, start_new_session=True)
             except:
                 pass
             return 0
@@ -1107,7 +1107,7 @@ class MyApp(Gtk.Application):
         return 0
 
 ################
-if "-t" in sys.argv or "--single-application" in sys.argv:
+if "-t" in sys.argv or "--single-instance" in sys.argv:
     SINGLE_APP = 1
 if SINGLE_APP == 1:
     app = MyApp(application_id="com.zephyr.text.editor",flags= Gio.ApplicationFlags.HANDLES_OPEN|Gio.ApplicationFlags.NON_UNIQUE)
