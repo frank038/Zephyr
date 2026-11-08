@@ -16,6 +16,7 @@ Features:
 - printing;
 - different font size choise for the view and the printer;
 - etc.
+- - usable in portable mode or installable (just making a package or by using a script)
 
 
 ![My image](https://github.com/frank038/Zephyr/blob/main/screenshot.png)
