@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.8.1 beta"
+VERSION = "0.8.2 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -30,9 +30,9 @@ if not os.access(_curr_dir, os.W_OK):
         HOME_CONFIG = _curr_dir
     if HOME_CONFIG != _curr_dir:
         try:
-            shutil.copytree("/usr/share/ZephyrTE4/configs", os.path.join(HOME_CONFIG, "configs"))
-            shutil.copytree("/usr/share/ZephyrTE4/icons", os.path.join(HOME_CONFIG, "icons"))
-            shutil.copytree("/usr/share/ZephyrTE4/langs", os.path.join(HOME_CONFIG, "langs"))
+            shutil.copytree("/usr/share/ZephyrTE/configs", os.path.join(HOME_CONFIG, "configs"))
+            shutil.copytree("/usr/share/ZephyrTE/icons", os.path.join(HOME_CONFIG, "icons"))
+            shutil.copytree("/usr/share/ZephyrTE/langs", os.path.join(HOME_CONFIG, "langs"))
         except Exception as E:
             HOME_CONFIG = _curr_dir
 else:
@@ -247,6 +247,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.main_box.append(self.editor_box)
         #
         self._notebook = Gtk.Notebook.new()
+        self._notebook.set_scrollable(True)
         self.editor_box.append(self._notebook)
         #
         if _files and _files != []:
