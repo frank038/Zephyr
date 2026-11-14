@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.8.2 beta"
+VERSION = "0.8.3 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -247,6 +247,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.main_box.append(self.editor_box)
         #
         self._notebook = Gtk.Notebook.new()
+        self._notebook.set_focusable(False)
         self._notebook.set_scrollable(True)
         self.editor_box.append(self._notebook)
         #
