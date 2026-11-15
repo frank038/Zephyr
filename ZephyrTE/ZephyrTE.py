@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.8.3 beta"
+VERSION = "0.9.0 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -9,7 +9,8 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('GtkSource', '5')
 gi.require_version('Pango', '1.0')
-from gi.repository import Gtk,Gdk,GLib,Gio,GtkSource,Pango
+gi.require_version("Adw", "1")
+from gi.repository import Gtk,Gdk,GLib,Gio,GtkSource,Pango,Adw
 import json
 import subprocess
 
@@ -136,7 +137,7 @@ MENU_XML="""
 """.format(_lang.NEWFILE, _lang.FOPEN, _lang.FSAVE, _lang.FSAVEAS, _lang.FPRINT, _lang.FSETTINGS, _lang.ABOUT, _lang.QUIT)
 
 
-class MainWindow(Gtk.ApplicationWindow):
+class MainWindow(Adw.ApplicationWindow):
     # _files: list of gio.file - n_files its len
     def __init__(self, _files, n_files, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -164,7 +165,6 @@ class MainWindow(Gtk.ApplicationWindow):
         #
         self.headerbar = Gtk.HeaderBar.new()
         self.headerbar.set_show_title_buttons(True)
-        self.set_titlebar(self.headerbar)
         ### style manager
         self.style_manager = GtkSource.StyleSchemeManager.get_default()
         self._scheme = None
@@ -241,7 +241,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self.ham_menu.set_menu_model(menu)
         #
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.set_child(self.main_box)
+        self.set_content(self.main_box)
+        self.main_box.append(self.headerbar)
         #
         self.editor_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.main_box.append(self.editor_box)
@@ -316,6 +317,8 @@ class MainWindow(Gtk.ApplicationWindow):
         
     def open_a_new_file(self, _file):
         sw = ScrolWin(self, _file)
+        if sw.cannot_open == -1:
+            return -1
         self._notebook.append_page(sw, sw.tab_label)
         self._notebook.set_tab_reorderable(sw, True)
         sw.text_editor.grab_focus()
@@ -323,9 +326,12 @@ class MainWindow(Gtk.ApplicationWindow):
             sw.buffer.set_style_scheme(self._scheme)
         if self._language:
             sw.buffer.set_language(self._language)
+        return 0
     
     def on_new_action(self, action, param=None):
-        self.open_a_new_file(None)
+        ret = self.open_a_new_file(None)
+        if ret == -1:
+            return
         self._notebook.set_current_page(-1)
     
     def on_open_action(self, action, param=None):
@@ -336,16 +342,17 @@ class MainWindow(Gtk.ApplicationWindow):
             _fd.set_initial_folder(Gio.File.new_for_path(os.path.dirname(_sw._file)))
         else:
             _fd.set_initial_folder(Gio.File.new_for_path(_HOME))
-        _filter = Gtk.FileFilter.new()
-        _filter.add_pattern("*.txt")
-        _fd.set_default_filter(_filter)
+        # _filter = Gtk.FileFilter.new()
+        # _filter.add_pattern("*.txt")
+        # _fd.set_default_filter(_filter)
         def open_callback(source_object, res, data):
             try:
                 l_gfile = _fd.open_text_file_finish(res)
                 _file = l_gfile[0].get_path()
                 if os.access(_file, os.R_OK):
-                    self.open_a_new_file(l_gfile[0])
-                    self._notebook.set_current_page(-1)
+                    ret = self.open_a_new_file(l_gfile[0])
+                    if ret == 0:
+                        self._notebook.set_current_page(-1)
             except GLib.GError as e:
                 return
         try:
@@ -397,10 +404,10 @@ class MainWindow(Gtk.ApplicationWindow):
             _fd.set_initial_folder(Gio.File.new_for_path(os.path.dirname(_sw._file)))
         else:
             _fd.set_initial_folder(Gio.File.new_for_path(_HOME))
-        _filter = Gtk.FileFilter.new()
-        _filter.add_pattern("*.txt")
-        _fd.set_default_filter(_filter)
-        # _fd.set_initial_name()
+        # _filter = Gtk.FileFilter.new()
+        # _filter.add_pattern("*.txt")
+        # _fd.set_default_filter(_filter)
+        # # _fd.set_initial_name()
         def save_callback(source_object, res, data):
             _sw = self._notebook.get_nth_page(self._notebook.get_current_page())
             _tb = _sw.buffer
@@ -484,7 +491,7 @@ class MainWindow(Gtk.ApplicationWindow):
     
     def dialog_action(self, _obj, _res, _data=None):
         _result = _obj.choose_finish(_res)
-        if _result == 0:
+        if _result == "0":
             if SINGLE_APP == 0:
                 self.app_.quit()
             else:
@@ -528,21 +535,18 @@ class MainWindow(Gtk.ApplicationWindow):
         
     def on_settings_action(self, action, param=None):
         WinSettings(self)
-        
+    
     def on_about_action_actived(self, action, param=None):
-        _aboutdial = Gtk.AboutDialog.new()
-        _img = Gtk.Image.new_from_file(os.path.join(HOME_CONFIG,"icons","zephyr.svg"))
-        _paintable = _img.get_paintable()
-        _aboutdial.set_logo(_paintable)
-        _aboutdial.set_program_name(ENAME)
-        _aboutdial.set_version(VERSION)
-        _aboutdial.set_authors(["Philip J. Fry"])
+        _aboutdial = Adw.AboutDialog.new()
+        _aboutdial.set_presentation_mode(Adw.DialogPresentationMode.FLOATING)#.BOTTOM_SHEET)#.FLOATING)
+        _aboutdial.set_application_icon("com.zephyr.text.editor")
+        _aboutdial.set_developers(["Philip J. Fry"])
         _aboutdial.set_comments("Made for me 🙂")
+        _aboutdial.set_version(VERSION)
         _aboutdial.set_website(ESITE)
         _aboutdial.set_license_type(Gtk.License.GPL_3_0_ONLY)
-        _aboutdial.set_transient_for(self_main)
-        _aboutdial.present()
-        
+        _aboutdial.present(self)
+
 
 class ScrolWin(Gtk.ScrolledWindow):
     def __init__(self, _parent, _gfile):
@@ -595,6 +599,7 @@ class ScrolWin(Gtk.ScrolledWindow):
         #
         self.file_is_monitored = False
         self.monitor_file = None
+        self.cannot_open = 0
         if self._gfile != None:
             self._file = self._gfile.get_path()
             _text = ""
@@ -607,9 +612,11 @@ class ScrolWin(Gtk.ScrolledWindow):
                 self.on_create_notebook_label(self._file)
                 self.set_monitor_file()
             except Exception as E:
-                self.buffer.set_text("", -1)
-                self.on_create_notebook_label(None)
-                AlDial(self_main, str(E))
+                # self.buffer.set_text("", -1)
+                # self.on_create_notebook_label(None)
+                AlDial(self_main, self._file+"\n\n"+str(E))
+                self.cannot_open = -1
+                return None
         else:
             self.on_create_notebook_label(None)
         #
@@ -817,16 +824,18 @@ class ScrolWin(Gtk.ScrolledWindow):
         box.append(btn)
         self.tab_label = box
 
-
-class AlDial(Gtk.AlertDialog):
+class AlDial(Adw.AlertDialog):
     def __init__(self, _parent, _str1):
         super().__init__()
         self._parent = _parent
         self._str1 = _str1
-        #
-        self.set_message(self._str1)
-        #
-        self.show(self._parent)
+        self.set_body(self._str1)
+        self.add_response("close", _lang.CLOSE)
+        self.connect("response", self.on_close)
+        self.present(self_main)
+        
+    def on_close(self, _d, _r):
+        self.close()
 
 # yes/no dialog - close the application and check for files modified
 class YNDial(Gtk.AlertDialog):
@@ -836,33 +845,29 @@ class YNDial(Gtk.AlertDialog):
         self._str1 = _str1
         self._str2 = _str2
         #
-        self.set_buttons([_lang.YES, _lang.NO])
-        self.props.cancel_button = 1
-        #
-        self.set_message(self._str1)
-        self.set_detail(self._str2)
+        self.add_response("0", _lang.YES)
+        self.add_response("1", _lang.NO)
+        self.set_heading(self._str1)
+        self.set_body(self._str2)
         #
         self.choose(self._parent, None, self._parent.dialog_action, None)
 
 ##################
 
-class WinSettings(Gtk.Window):
+class WinSettings(Adw.Dialog):
     def __init__(self, _parent):
         super().__init__()
         self._parent = _parent
-        self.set_transient_for(self._parent)
-        self.set_destroy_with_parent(True)
         self.set_name("settingdialog")
-        self.set_resizable(True)
         self.set_size_request(800, 300)
         self.set_title(_lang.FSETTINGS)
         #
         self.headerbar = Gtk.HeaderBar.new()
-        self.set_titlebar(self.headerbar)
         self.headerbar.set_show_title_buttons(False)
         #
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.set_child(self.main_box)
+        self.main_box.append(self.headerbar)
         #
         self.stack_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.main_box.append(self.stack_box)
@@ -873,6 +878,7 @@ class WinSettings(Gtk.Window):
         #
         btn_apply = Gtk.Button(label=_lang.APPLY)
         btn_apply.connect("clicked", self.on_apply)
+        btn_apply.set_css_classes(["suggested-action",""])
         self.headerbar.pack_start(btn_apply)
         #
         btn_close = Gtk.Button(label=_lang.CLOSE)
@@ -955,7 +961,7 @@ class WinSettings(Gtk.Window):
         self.single_app.set_selected(SINGLE_APP)
         bgrid1.attach_next_to(self.single_app,lbl06,1,1,1)
         ########
-        self.present()
+        self.present(self._parent)
         
     def on_apply(self, w):
         global WWIDTH
@@ -1023,16 +1029,16 @@ class WinSettings(Gtk.Window):
         except Exception as E:
             AlDial(self_main, str(E))
         #
-        self.destroy()
+        self.close()
         _sw.text_editor.grab_focus()
     
     def on_close(self, w):
-        self.destroy()
+        self.close()
         _sw = self._parent._notebook.get_nth_page(self._parent._notebook.get_current_page())
         _sw.text_editor.grab_focus()
 
 
-class MyApp(Gtk.Application):
+class MyApp(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.add_main_option("single-instance",ord("t"),GLib.OptionFlags.NONE,GLib.OptionArg.NONE,"Single instance",None)
