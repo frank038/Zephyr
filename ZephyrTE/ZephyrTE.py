@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.9.0 beta"
+VERSION = "0.9.1 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -838,7 +838,7 @@ class AlDial(Adw.AlertDialog):
         self.close()
 
 # yes/no dialog - close the application and check for files modified
-class YNDial(Gtk.AlertDialog):
+class YNDial(Adw.AlertDialog):
     def __init__(self, _parent, _str1, _str2):
         super().__init__()
         self._parent = _parent
