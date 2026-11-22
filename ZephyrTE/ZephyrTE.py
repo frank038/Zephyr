@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION = "0.9.1 beta"
+VERSION = "0.9.2 beta"
 ENAME = "Zephyr"
 ESITE = "https://github.com/frank038/Zephyr"
 
@@ -57,7 +57,9 @@ config_conf_start = {
 "file-monitoring": 0,
 "font-size": 10,
 "single-app": 0,
-"autoclose-signs": 0
+"autoclose-signs": 0,
+"hlbackground": "",
+"hlforeground": ""
 }
 if not os.path.exists(config_file):
     try:
@@ -88,6 +90,8 @@ FONT_SIZE = config_conf["font-size"] # font size
 SINGLE_APP = config_conf["single-app"] # one instance of this program
 # SIGN_AUTOCLOSE = config_conf["autoclose-signs"]
 SIGN_AUTOCLOSE = 0
+HLFOREGROUND = config_conf["hlforeground"]
+HLBACKGROUND = config_conf["hlbackground"]
 #########
 TAB_SIZE_LIST = [0,2,4,8]
 SIGN_AUTOCLOSE_LIST = ["(","[","{","'",'"',"«","<","?","!"]
@@ -181,12 +185,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.lhbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.headerbar.pack_start(self.lhbox)
         #
-        self.search_entry = Gtk.Entry.new()
-        self.search_entry.connect("activate", self.on_search_entry_activate)
-        self.search_entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, "search")
-        self.search_entry.connect("icon-press", self.on_search_icon_pressed)
-        self.lhbox.append(self.search_entry)
-        self.search_buffer = self.search_entry.get_buffer()
         # right headerbar box
         self.rhbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.headerbar.pack_end(self.rhbox)
@@ -265,44 +263,15 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.open_a_new_file(None)
         #
-        self._notebook.connect("switch-page", self.on_notebook_switch_page)
-        self._notebook.connect("change-current-page", self.on_notebook_change_page)
+        # self._notebook.connect("switch-page", self.on_notebook_switch_page)
+        # self._notebook.connect("change-current-page", self.on_notebook_change_page)
         
-    def on_notebook_switch_page(self, _notebook, _sw, i_sw):
-        text_searched = _sw._entry_entry
-        self.search_buffer.set_text(text_searched, -1)
+    # def on_notebook_switch_page(self, _notebook, _sw, i_sw):
+        # text_searched = _sw._entry_entry
         
-    def on_notebook_change_page(self, _notebook, i_sw):
-        _sw = _notebook.get_nth_page(i_sw)
-        text_searched = _sw._entry_entry
-        self.search_buffer.set_text(text_searched, -1)
-        
-    def on_search_icon_pressed(self, _e, _pos):
-        self.search_buffer.set_text("", -1)
-        _sw = self._notebook.get_nth_page(self._notebook.get_current_page())
-        s_iter = _sw.buffer.get_iter_at_offset(0)
-        e_iter = _sw.buffer.get_iter_at_offset(-1)
-        _sw.buffer.remove_all_tags(s_iter, e_iter)
-        _sw._entry_entry = ""
-    
-    def on_search_entry_activate(self, _e):
-        text_searched = self.search_buffer.get_text()
-        _sw = self._notebook.get_nth_page(self._notebook.get_current_page())
-        _sw._entry_entry = text_searched
-        #
-        cursor_mark = _sw.buffer.get_insert()
-        start = _sw.buffer.get_iter_at_mark(cursor_mark)
-        if start.get_offset() == _sw.buffer.get_char_count():
-            start = _sw.buffer.get_start_iter()
-        self.search_and_mark(_sw, text_searched, start)
-        
-    def search_and_mark(self, _sw, text, start):
-        end = _sw.buffer.get_end_iter()
-        match = start.forward_search(text, 0, end)
-        if match is not None:
-            match_start, match_end = match
-            _sw.buffer.apply_tag(_sw.tag_found, match_start, match_end)
-            self.search_and_mark(_sw, text, match_end)
+    # def on_notebook_change_page(self, _notebook, i_sw):
+        # _sw = _notebook.get_nth_page(i_sw)
+        # text_searched = _sw._entry_entry
     
     def set_font_size(self, _type):
         self.css_provider.load_from_string("#texteditor.view {"+ \
@@ -361,7 +330,7 @@ class MainWindow(Adw.ApplicationWindow):
             AlDial(self_main, str(E))
     
     def on_popover_hammenu_closed(self, _w):
-        _sw = self._notebook.get_current_page()
+        _sw = self._notebook.get_current_page().sw
         _sw.text_editor.grab_focus()
     
     def on_scheme_changed(self, _btn, _param):
@@ -462,7 +431,7 @@ class MainWindow(Adw.ApplicationWindow):
         #
         _compositor = GtkSource.PrintCompositor.new_from_view(_editor)
         _compositor.set_wrap_mode(Gtk.WrapMode.CHAR)
-        _compositor.set_highlight_syntax(True)
+        _compositor.set_highlight_syntax(False)
         _compositor.set_print_line_numbers(False)
         _compositor.set_body_font_name(font_name)
         #
@@ -470,11 +439,18 @@ class MainWindow(Adw.ApplicationWindow):
         print_operation.set_show_progress(True)
         print_operation.connect("begin-print", self.on_begin_print, _compositor)
         print_operation.connect("draw-page", self.on_draw_page, _compositor)
+        print_operation.connect("done", self.on_print_done, _name)
         #
         res = print_operation.run(
             Gtk.PrintOperationAction.PRINT_DIALOG,
             self.app_.get_active_window())
         #
+        # if res == Gtk.PrintOperationResult.ERROR:
+            # AlDial(self_main, "{}: {}".format(_lang.FPRINTEDERROR, _name))
+        # elif res == Gtk.PrintOperationResult.APPLY:
+            # AlDial(self_main, "{}: {}".format(_lang.FPRINTED, _name))
+        
+    def on_print_done(self, print_operation, res, _name):
         if res == Gtk.PrintOperationResult.ERROR:
             AlDial(self_main, "{}: {}".format(_lang.FPRINTEDERROR, _name))
         elif res == Gtk.PrintOperationResult.APPLY:
@@ -548,9 +524,11 @@ class MainWindow(Adw.ApplicationWindow):
         _aboutdial.present(self)
 
 
-class ScrolWin(Gtk.ScrolledWindow):
+# class ScrolWin(Gtk.ScrolledWindow):
+class ScrolWin(Gtk.Box):
     def __init__(self, _parent, _gfile):
         super().__init__()
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         self.main_app = _parent
         self._gfile = _gfile
         self._file = None
@@ -566,17 +544,53 @@ class ScrolWin(Gtk.ScrolledWindow):
         #
         self.set_hexpand(True)
         self.set_vexpand(True)
-        self.propagate_natural_height = 1
-        self.propagate_natural_width = 1
+        ## find function
+        self.find_box = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self.find_box.set_margin_start(4)
+        self.find_box.set_margin_end(4)
+        self.find_box.set_margin_top(4)
+        self.find_box.set_margin_bottom(4)
+        self.append(self.find_box)
+        self.find_box.set_visible(False)
+        #
+        self.sw = Gtk.ScrolledWindow.new()
+        self.sw.set_hexpand(True)
+        self.sw.set_vexpand(True)
+        self.sw.propagate_natural_height = 1
+        self.sw.propagate_natural_width = 1
+        self.append(self.sw)
+        #
+        self.search_entry = Gtk.Entry.new()
+        self.search_entry.set_hexpand(True)
+        self.search_entry.connect("activate", self.on_search_entry_activate)
+        self.search_entry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, "search")
+        self.search_entry.connect("icon-press", self.on_search_icon_pressed)
+        self.find_box.append(self.search_entry)
+        self.search_buffer = self.search_entry.get_buffer()
+        self.match_start = -1
+        self.match_end = -1
+        #
+        self.hl_all = Gtk.ToggleButton(label=_lang.HLALL)
+        self.hl_all.connect("toggled", self.on_highlight_all)
+        self.find_box.append(self.hl_all)
+        #
+        self.prev_btn = Gtk.Button(label=_lang.PREV)
+        self.prev_btn.connect("clicked", self.on_btn_search, -1)
+        self.find_box.append(self.prev_btn)
+        #
+        self.next_btn = Gtk.Button(label=_lang.NEXT)
+        self.next_btn.connect("clicked", self.on_btn_search, 1)
+        self.find_box.append(self.next_btn)
         #
         self.text_editor = GtkSource.View.new()
+        self.text_editor.set_hexpand(True)
+        self.text_editor.set_vexpand(True)
         self.text_editor.set_name("texteditor")
         self.text_editor.set_monospace(True)
         self.text_editor.set_show_line_numbers(True)
         self.text_editor.set_show_right_margin(True)
         # self.text_editor.set_right_margin_position(80)
         self.text_editor.set_highlight_current_line(True)
-        self.text_editor.set_enable_snippets(True)
         self.text_editor.set_indent_on_tab(True)
         if TAB_SIZE != 0:
             self.text_editor.set_indent_width(TAB_SIZE_LIST[TAB_SIZE])
@@ -590,12 +604,19 @@ class ScrolWin(Gtk.ScrolledWindow):
         self.WRAP_MODE = 0
         self.text_editor.set_wrap_mode(self.WRAP_MODE)
         self.text_editor.set_smart_home_end(GtkSource.SmartHomeEndType.BEFORE)
-        self.set_child(self.text_editor)
+        self.sw.set_child(self.text_editor)
         self.is_buffer_modified = False
         self.file_reloaded = False
         #
         self.buffer = self.text_editor.get_buffer()
         self.buffer.set_highlight_syntax(True)
+        #
+        # self.text_editor.set_show_line_marks(True)
+        # self.text_editor.set_enable_snippets(True)
+        # self.completion = self.text_editor.get_completion()
+        # self.c_provider = GtkSource.CompletionWords.new("compl")
+        # self.c_provider.register(self.buffer)
+        # self.completion.add_provider(self.c_provider) 
         #
         self.file_is_monitored = False
         self.monitor_file = None
@@ -622,7 +643,11 @@ class ScrolWin(Gtk.ScrolledWindow):
         #
         self.buffer.connect("changed", self.tbuffer_changed)
         self.connection_modified = self.buffer.connect("modified-changed", self.tbuffer_modified_changed)
-        self.tag_found = self.buffer.create_tag("found", background="yellow", foreground="black")
+        _color_back = Gdk.RGBA()
+        _color_back.parse(HLBACKGROUND)
+        _color_fore = Gdk.RGBA()
+        _color_fore.parse(HLFOREGROUND)
+        self.tag_found = self.buffer.create_tag("found", background_rgba=_color_back, foreground_rgba=_color_fore)
         #
         key_ctrl = Gtk.EventControllerKey()
         key_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
@@ -663,6 +688,89 @@ class ScrolWin(Gtk.ScrolledWindow):
         elif event_type == Gio.FileMonitorEvent.DELETED:
             AlDial(self_main, "File deleted: {}".format(self._file))
             self.buffer.set_modified(True)
+    
+    def on_search_icon_pressed(self, _e, _pos):
+        self.search_buffer.set_text("", -1)
+        s_iter = self.buffer.get_iter_at_offset(0)
+        e_iter = self.buffer.get_iter_at_offset(-1)
+        self.buffer.remove_tag(self.tag_found, s_iter, e_iter)
+        self._entry_entry = ""
+        self.next_btn.set_sensitive(True)
+        self.prev_btn.set_sensitive(True)
+        self.hl_all.set_active(False)
+    
+    def on_search_entry_activate(self, _e=None, _d=1):
+        self.match_start = -1
+        self.match_end = -1
+        text_searched = self.search_buffer.get_text()
+        self._entry_entry = text_searched
+        #
+        start = self.buffer.get_iter_at_mark(self.buffer.get_insert())
+        if start.get_offset() == self.buffer.get_char_count():
+            start = self.buffer.get_start_iter()
+        self.search_and_mark(text_searched, start, None,  _d)
+        
+    def search_and_mark(self, text, start, end, _t):
+        if _t == 1:
+            match = start.forward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None) # end) # useless?
+        elif _t == -1:
+            match = start.backward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None)
+        if match == None and _t == 1:
+            start = self.buffer.get_start_iter()
+            end = self.buffer.get_end_iter()
+            match = start.forward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None)
+        elif match == None and _t == -1:
+            start = self.buffer.get_end_iter()
+            match = start.backward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None)
+        if match is not None:
+            ### remove the tag before
+            s_iter = self.buffer.get_iter_at_offset(0)
+            e_iter = self.buffer.get_iter_at_offset(-1)
+            self.buffer.remove_tag(self.tag_found, s_iter, e_iter)
+            #
+            self.match_start, self.match_end = match
+            self.buffer.apply_tag(self.tag_found, self.match_start, self.match_end)
+            # scroll the view
+            self.text_editor.scroll_to_iter(self.match_end, 0.2, False, 0, 0)
+            
+    def on_highlight_all(self, _w):
+        text = self.search_buffer.get_text()
+        if text == "":
+            _w.set_active(False)
+            return
+        if _w.get_active():
+            self.next_btn.set_sensitive(False)
+            self.prev_btn.set_sensitive(False)
+            text = self.search_buffer.get_text()
+            cursor_mark = self.buffer.get_insert()
+            start = self.buffer.get_iter_at_mark(cursor_mark)
+            if start.get_offset() == self.buffer.get_char_count():
+                start = self.buffer.get_start_iter()
+            self.search_and_mark_all(text, start)
+        else:
+            self.next_btn.set_sensitive(True)
+            self.prev_btn.set_sensitive(True)
+            s_iter = self.buffer.get_iter_at_offset(0)
+            e_iter = self.buffer.get_iter_at_offset(-1)
+            self.buffer.remove_tag(self.tag_found, s_iter, e_iter)
+        
+    def search_and_mark_all(self, text, start):
+        end = self.buffer.get_end_iter()
+        match = start.forward_search(text, 0, end)
+        if match is not None:
+            match_start, match_end = match
+            self.buffer.apply_tag(self.tag_found, match_start, match_end)
+            self.search_and_mark_all(text, match_end)
+            
+    def on_btn_search(self, _w, _t):
+        text = self.search_buffer.get_text()
+        if self.match_start == -1 and self.match_end == -1:
+            self.on_search_entry_activate(None, _t)
+            return
+        if _t == 1:
+            self.search_and_mark(text, self.match_end, None, 1)
+        elif _t == -1:
+            self.search_and_mark(text, self.match_start, None, -1)
     
     def tbuffer_modified_changed(self, _tb):
         if self.file_reloaded == True:
@@ -746,6 +854,18 @@ class ScrolWin(Gtk.ScrolledWindow):
         self._autoclose_signs = not self._autoclose_signs
         self.text_editor.grab_focus()
         
+    def on_find_show(self, _w):
+        if _w.get_active():
+            self.find_box.set_visible(True)
+            self.next_btn.set_sensitive(True)
+            self.prev_btn.set_sensitive(True)
+            self.hl_all.set_active(False)
+        else:
+            s_iter = self.buffer.get_iter_at_offset(0)
+            e_iter = self.buffer.get_iter_at_offset(-1)
+            self.buffer.remove_tag(self.tag_found, s_iter, e_iter)
+            self.find_box.set_visible(False)
+        
     def on_create_notebook_label(self, _file):
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         # editable button
@@ -800,6 +920,20 @@ class ScrolWin(Gtk.ScrolledWindow):
         self.autoclose_btn.connect("toggled", self.on_autoclose_btn)
         box.append(self.autoclose_btn)
         self._autoclose_signs = SIGN_AUTOCLOSE
+        # find
+        self.find_btn = Gtk.ToggleButton.new()
+        if icon_theme.has_icon("edit-find"):
+            fnd_il = "edit-find"
+        elif icon_theme.has_icon("find"):
+            fnd_il = "find"
+        elif icon_theme.has_icon("edit-find-replace"):
+            fnd_il = edit-find-replace
+        elif icon_theme.has_icon("system-search"):
+            fnd_il = "system-search"
+        self.find_btn.set_icon_name(fnd_il)
+        self.find_btn.set_tooltip_text(_lang.FINDTOOLTIP)
+        self.find_btn.connect("toggled", self.on_find_show)
+        box.append(self.find_btn)
         # 
         if _file:
             self._lbl = Gtk.Label(label=os.path.basename(_file))
@@ -960,6 +1094,27 @@ class WinSettings(Adw.Dialog):
         self.single_app = Gtk.DropDown.new_from_strings([_lang.NO, _lang.YES])
         self.single_app.set_selected(SINGLE_APP)
         bgrid1.attach_next_to(self.single_app,lbl06,1,1,1)
+        ### highlight colours
+        # background
+        lbl07 = Gtk.Label(label=_lang.BACKGROUNDCOLOR)
+        lbl07.set_halign(Gtk.Align.START)
+        bgrid1.attach(lbl07,0,7,1,1)
+        color_dlg = Gtk.ColorDialog.new()
+        self.bcolor_btn = Gtk.ColorDialogButton.new(color_dlg)
+        _btn_color = Gdk.RGBA()
+        _btn_color.parse(HLBACKGROUND)
+        self.bcolor_btn.set_rgba(_btn_color)
+        bgrid1.attach_next_to(self.bcolor_btn,lbl07,1,1,1)
+        # foreground
+        lbl08 = Gtk.Label(label=_lang.FOREGROUNDCOLOR)
+        lbl08.set_halign(Gtk.Align.START)
+        bgrid1.attach(lbl08,0,8,1,1)
+        color_dlg = Gtk.ColorDialog.new()
+        self.fcolor_btn = Gtk.ColorDialogButton.new(color_dlg)
+        _btn_color = Gdk.RGBA()
+        _btn_color.parse(HLFOREGROUND)
+        self.fcolor_btn.set_rgba(_btn_color)
+        bgrid1.attach_next_to(self.fcolor_btn,lbl08,1,1,1)
         ########
         self.present(self._parent)
         
@@ -974,6 +1129,8 @@ class WinSettings(Adw.Dialog):
         global FILE_MONITORING
         global FONT_SIZE
         global SINGLE_APP
+        global HLFOREGROUND
+        global HLBACKGROUND
         _sw = self._parent._notebook.get_nth_page(self._parent._notebook.get_current_page())
         #
         WWIDTH = self._parent.get_width()
@@ -1021,6 +1178,13 @@ class WinSettings(Adw.Dialog):
         #
         SINGLE_APP = self.single_app.get_selected()
         config_conf["single-app"] = SINGLE_APP
+        #
+        HLFOREGROUND = self.fcolor_btn.get_rgba().to_string()
+        config_conf["hlforeground"] = HLFOREGROUND
+        HLBACKGROUND = self.bcolor_btn.get_rgba().to_string()
+        config_conf["hlbackground"] = HLBACKGROUND
+        _sw.tag_found.props.foreground_rgba = self.fcolor_btn.get_rgba()
+        _sw.tag_found.props.background_rgba = self.bcolor_btn.get_rgba()
         #
         try:
             _ff =  open(os.path.join(HOME_CONFIG,"configs/config.json"), "w")
