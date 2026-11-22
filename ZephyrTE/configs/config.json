@@ -8,5 +8,7 @@
     "file-monitoring": 0,
     "font-size": 10,
     "single-app": 0,
-    "autoclose-signs": 0
+    "autoclose-signs": 0,
+    "hlbackground": "rgb(255,255,255)",
+    "hlforeground": "rgb(0,0,0)"
 }
